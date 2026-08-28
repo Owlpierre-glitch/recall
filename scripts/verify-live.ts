@@ -62,8 +62,11 @@ async function api<T>(path: string, init?: RequestInit, attempt = 1): Promise<T>
   if (response.status === 502 && attempt <= 5) {
     const body = await response.clone().text();
     if (/RATE_LIMITED/.test(body)) {
+      // Honour the delay the provider asks for rather than capping below it.
+      // Capping at twenty seconds when it asked for fifty seven just guarantees the
+      // retry fails too, and makes a recoverable wait look like a hard failure.
       const suggested = Number(/retry in ([\d.]+)s/i.exec(body)?.[1] ?? 0);
-      const wait = Math.min(Math.max(suggested * 1000, 2000) + 500, 20000);
+      const wait = Math.min(Math.max(suggested * 1000, 2000) + 1500, 120000);
       console.log(`        rate limited, waiting ${Math.round(wait / 1000)}s and retrying`);
       await sleep(wait);
       return api<T>(path, init, attempt + 1);

@@ -67,7 +67,6 @@ export function buildExtractionBody(userMessage: string): GeminiRequestBody {
       maxOutputTokens: 600,
       responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA,
-      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 }

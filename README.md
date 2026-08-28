@@ -178,10 +178,25 @@ against production.
 
 This is the definition of done expressed as code rather than as a paragraph.
 
-One practical note: a free tier Gemini key allows twenty requests a minute and one turn here costs
-two of them, for extraction and for the answer. A person typing never notices. The script paces
-itself because it is not a person, and the app retries a rate limit once using the delay the provider
-suggests before reporting it on screen.
+### A note on free tier quotas, because it changed the design
+
+The flagship `gemini-3.5-flash` gives a free tier key **twenty requests a day**, not a minute. I found
+that the slow way: once it was spent, the API kept replying "please retry in about fifty seconds" and
+never recovered across several minutes of honouring exactly that delay. Twenty a day is fine while
+building and useless for a link a stranger might click.
+
+So both calls are pinned to lite models, which carry far larger free allowances, and to two
+*different* lite models, because quota is counted per model and one turn costs two requests. Putting
+both on one model would halve the ceiling for nothing. The split is the right shape regardless:
+extraction is a narrow schema constrained task at temperature zero, and answering someone about their
+own life is where quality shows. On a billed key, `gemini-3.5-flash` is a good chat model and the
+constant at the top of `src/lib/gemini.ts` is the only thing to change.
+
+One related thing worth writing down. The request originally set `thinkingConfig` to switch off
+thinking for latency. Newer models reject that outright with a generic "invalid argument", so a small
+performance tweak had quietly become the reason the app could not be pointed at a current model, and
+the error said nothing useful about why. It is gone. Optimisations that cost you portability and pay
+you back in an opaque 400 are not worth keeping.
 
 ## Stack
 

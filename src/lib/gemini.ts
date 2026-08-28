@@ -27,8 +27,28 @@ import type { GeminiRequestBody } from "./memory/prompt.ts";
  * Changing this is a code change with a commit against it, never silent config
  * drift, and an unavailable model names itself on screen.
  */
-export const CHAT_MODEL = "gemini-3.5-flash";
-export const EXTRACTION_MODEL = "gemini-3.5-flash";
+/**
+ * Both models are "lite", and both are pinned for the same measured reason.
+ *
+ * The flagship `gemini-3.5-flash` gives a free tier key twenty requests A DAY,
+ * not a minute. That was established the slow way: once exhausted, the API kept
+ * answering "please retry in about fifty seconds" and never recovered across
+ * several minutes of honouring that delay. Twenty requests a day is fine for
+ * development and useless for a link a stranger might click, which is what this
+ * is for. The lite models carry far larger free allowances.
+ *
+ * They are also two DIFFERENT models on purpose. Quota is counted per model and
+ * one turn here costs two requests, so putting both calls on one model would
+ * halve the ceiling for no benefit.
+ *
+ * And the split is the right shape anyway: extraction is a narrow, schema
+ * constrained task at temperature zero, while answering someone about their own
+ * life is where quality actually shows.
+ *
+ * If this is ever run on a billed key, `gemini-3.5-flash` is a good CHAT_MODEL.
+ */
+export const CHAT_MODEL = "gemini-3.5-flash-lite";
+export const EXTRACTION_MODEL = "gemini-3.1-flash-lite";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -147,7 +167,7 @@ export async function callGemini(
         return callGemini(model, body, signal, attempt + 1);
       }
       throw new ProviderError({
-        message: `Rate limited by Gemini while calling ${model}, and a retry was also refused. The free tier allows twenty requests a minute and one turn here costs two. Provider said: ${detail}`,
+        message: `Rate limited by Gemini while calling ${model}, and a retry was also refused. Free tier keys have a daily request allowance per model and this one is spent. Provider said: ${detail}`,
         model,
         status: response.status,
         code: "RATE_LIMITED",

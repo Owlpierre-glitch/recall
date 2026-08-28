@@ -119,12 +119,13 @@ export function buildPayload(input: PayloadInput): BuiltPayload {
   const body: GeminiRequestBody = {
     systemInstruction: { parts: [{ text: systemText }] },
     contents,
+    // Deliberately minimal. An earlier version set thinkingConfig to disable
+    // thinking for latency, which newer models reject outright with a generic
+    // "invalid argument", so a latency tweak had quietly become the reason the
+    // app could not be pointed at a current model. Not worth the coupling.
     generationConfig: {
       temperature: 0.4,
       maxOutputTokens: 600,
-      // Flash thinks by default. Nothing here needs it, and turning it off keeps
-      // the demo responsive for someone clicking a link out of curiosity.
-      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
