@@ -43,7 +43,9 @@ function titleFor(code: string): string {
     case "SESSION_ENDED":
       return "That session is over";
     case "NETWORK":
-      return "Could not reach the provider";
+      return "Could not reach the server";
+    case "BAD_RESPONSE":
+      return "The server answered with something unreadable";
     default:
       return "Something failed, and here is what";
   }

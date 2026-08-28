@@ -359,12 +359,23 @@ pre.code {
 
 /* ---------- start and ended screens ---------- */
 
+/*
+ * margin:auto on the child rather than align-items:center on the parent. Both
+ * centre the card when it fits, but centring from the parent clips the top of
+ * anything taller than the viewport and leaves no way to scroll to it. On a
+ * short window, a phone in landscape for instance, that put the name field and
+ * the button off screen and unreachable.
+ */
 .centre {
   flex: 1;
   display: flex;
-  align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
+}
+
+.centre > * {
+  margin: auto;
 }
 
 .card {

@@ -27,13 +27,53 @@ interface Message {
   text: string;
 }
 
+/**
+ * Every response is read as text first and only then parsed.
+ *
+ * Calling response.json() straight away works right up until something between
+ * the browser and the route returns HTML: a platform error page, a gateway
+ * timeout, a crashed server. Then the only thing the user is told is
+ * `Unexpected token '<'`, which is worse than useless because it points at the
+ * parser instead of at the outage. This project argues that failures should be
+ * legible, so the one place every failure passes through cannot be the
+ * exception.
+ */
 async function call<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-  });
-  const data = (await response.json()) as T | { error: ApiError };
-  if (!response.ok) throw (data as { error: ApiError }).error;
+  let response: Response;
+  try {
+    response = await fetch(input, {
+      ...init,
+      headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+    });
+  } catch (cause) {
+    throw {
+      code: "NETWORK",
+      message: `Could not reach the server. ${(cause as Error).message}`,
+    } satisfies ApiError;
+  }
+
+  const text = await response.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw {
+      code: "BAD_RESPONSE",
+      message: `The server answered HTTP ${response.status} with something that is not JSON, which usually means it failed before it reached the app. First of what it sent: ${text.slice(0, 120).replace(/\s+/g, " ").trim()}`,
+      status: response.status,
+    } satisfies ApiError;
+  }
+
+  if (!response.ok) {
+    const error = (data as { error?: ApiError }).error;
+    throw (
+      error ?? {
+        code: "UNEXPECTED",
+        message: `The server answered HTTP ${response.status} without saying why.`,
+        status: response.status,
+      }
+    );
+  }
   return data as T;
 }
 
@@ -312,7 +352,10 @@ export function RecallApp() {
               <div className="empty">
                 {activeCount > 0
                   ? "This session starts empty. Ask what it knows about you."
-                  : "Say something about yourself. Watch the panel on the right."}
+                  : // Not "the panel on the right": on a narrow screen the panels
+                    // stack underneath, and the layout should not be described
+                    // in a way that is wrong on a phone.
+                    "Say something about yourself, then watch what gets stored."}
               </div>
             ) : null}
             {messages.map((message) => (
