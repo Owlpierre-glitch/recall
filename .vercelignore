@@ -1,0 +1,12 @@
+# vercel deploy ignores .gitignore and uploads the whole working directory,
+# so the same exclusions have to be repeated here.
+node_modules
+.next
+out
+.git
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+.DS_Store
+docs/screenshots

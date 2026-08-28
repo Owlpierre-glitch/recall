@@ -1,0 +1,30 @@
+{
+  "name": "recall",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A chat demo whose memory survives the session ending, and that lets you verify it is remembering honestly.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test test/*.test.ts",
+    "migrate": "node --env-file-if-exists=.env.local scripts/migrate.ts"
+  },
+  "dependencies": {
+    "next": "^15.5.4",
+    "postgres": "^3.4.7",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.8.3"
+  }
+}
