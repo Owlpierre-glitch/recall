@@ -5,12 +5,19 @@ import type { NewTurn, Store } from "./types.ts";
 /**
  * The Postgres implementation, pointed at Supabase in production.
  *
- * Two deliberate choices:
+ * `prepare: false` is the setting Supabase documents for its pooled connection
+ * string, which runs transaction mode pooling where a server connection is
+ * returned to the pool after every transaction.
  *
- * `prepare: false` because Supabase's pooled connection string runs through
- * pgbouncer in transaction mode, where prepared statements do not survive
- * between checkouts. Leaving it on works locally and fails only once deployed,
- * which is the worst possible time to find out.
+ * Worth being precise about, since this is the kind of claim that gets repeated
+ * without checking: I ran the whole suite through a real pgbouncer in
+ * transaction mode and could NOT force a failure with prepared statements left
+ * on, with pooler side support both enabled and disabled. pgbouncer has tracked
+ * and replayed prepared statements since 1.21, and postgres.js re-prepares when
+ * a statement goes missing. So this stays because it is the documented safe
+ * setting for a pooler and costs nothing measurable here, not because it was
+ * proven load bearing. What IS verified is that everything below works through
+ * transaction mode pooling.
  *
  * applyDecisions runs inside one transaction. A supersede is two writes, and a
  * crash between them would leave a person holding two contradictory facts that

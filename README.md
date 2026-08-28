@@ -158,6 +158,19 @@ load and, if the answer is no, says so and disables the button instead of lettin
 name and then hit a wall. A demo whose whole argument is that you can inspect its workings should be
 able to answer the simplest question about itself.
 
+## What has actually been run against what
+
+Worth stating plainly, because "it works" means different things:
+
+| Checked | How |
+| --- | --- |
+| Memory layer rules | 43 tests, no network, no database, no key |
+| Storage contract | The same 6 tests against the in memory store and against real Postgres |
+| TLS to a hosted database | Migration and all 49 tests over an encrypted connection |
+| Transaction mode pooling | Migration, all 49 tests and all 20 acceptance checks through a real pgbouncer, the topology Supabase's pooled string uses |
+| The deployed app | 20 acceptance checks over HTTP against a running deployment |
+| Phone sized screens | Start screen and chat, at 375 wide |
+
 ## Deploying it yourself
 
 ```bash
@@ -170,9 +183,14 @@ npm run verify -- https://your-deployment.vercel.app
 ```
 
 On Supabase, take the **pooled** connection string, the one on port 6543. The driver is configured
-with `prepare: false` for it, because that endpoint runs through pgbouncer in transaction mode where
-prepared statements do not survive between checkouts. Left at the default it connects happily to a
-local database and fails only once deployed.
+with `prepare: false`, which is what Supabase documents for that endpoint.
+
+Being precise about that, because it is the sort of claim people repeat without checking: the whole
+suite has been run through a real pgbouncer in transaction mode, and prepared statements could **not**
+be made to fail, with pooler side support both on and off. pgbouncer has replayed them since 1.21 and
+`postgres.js` re-prepares when one goes missing. The setting stays because it is the documented safe
+default and costs nothing here, not because it was proven necessary. What is verified is that the
+app, the migration and all 49 tests work through transaction mode pooling.
 
 Two more things that bite on Vercel specifically, both already handled here. `vercel deploy` ignores
 `.gitignore` and uploads the working directory, so there is a `.vercelignore`. And a build is
