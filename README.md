@@ -141,6 +141,26 @@ That second run is not decoration. The first time it ran it caught a foreign key
 in memory store had no way to reject, which would have passed every offline test and failed on the
 first real write.
 
+## Deploying it yourself
+
+```bash
+vercel link
+vercel env add DATABASE_URL production     # your Postgres connection string
+vercel env add GEMINI_API_KEY production
+DATABASE_URL="postgresql://..." npm run migrate
+vercel deploy --prod
+npm run verify -- https://your-deployment.vercel.app
+```
+
+On Supabase, take the **pooled** connection string, the one on port 6543. The driver is configured
+with `prepare: false` for it, because that endpoint runs through pgbouncer in transaction mode where
+prepared statements do not survive between checkouts. Left at the default it connects happily to a
+local database and fails only once deployed.
+
+Two more things that bite on Vercel specifically, both already handled here. `vercel deploy` ignores
+`.gitignore` and uploads the working directory, so there is a `.vercelignore`. And a build is
+rejected with a bare `BLOCKED` if git has no `user.email` configured.
+
 ## Verifying a deployment
 
 The unit tests prove the rules. This proves the deployed thing:
