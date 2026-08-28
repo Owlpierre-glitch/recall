@@ -8,6 +8,7 @@ import { SessionPanel } from "./SessionPanel.tsx";
 import type {
   ApiError,
   ChatResponse,
+  HealthReport,
   PayloadView,
   SessionResponse,
   TurnReport,
@@ -50,6 +51,7 @@ export function RecallApp() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("stored");
+  const [health, setHealth] = useState<HealthReport | null>(null);
 
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +59,13 @@ export function RecallApp() {
   // the End session control creates a new one, so the demo cannot accidentally
   // look more impressive than it is.
   useEffect(() => {
+    // Ask the deployment whether it can actually serve anybody before offering
+    // them a text box. A 503 here is a real answer, not an error to swallow.
+    fetch("/api/health")
+      .then((response) => response.json())
+      .then((report: HealthReport) => setHealth(report))
+      .catch(() => setHealth(null));
+
     const saved = window.localStorage.getItem(SESSION_KEY);
     setHandleInput(window.localStorage.getItem(HANDLE_KEY) ?? "");
     setPreviousSessionId(window.localStorage.getItem(PREVIOUS_KEY));
@@ -216,8 +225,12 @@ export function RecallApp() {
               maxLength={32}
               aria-label="A name to be known by"
             />
+            {health && !health.ready ? <NotReadyBanner health={health} /> : null}
             {error ? <ErrorBanner error={error} onDismiss={() => setError(null)} /> : null}
-            <button className="btn primary" disabled={busy || handleInput.trim().length < 2}>
+            <button
+              className="btn primary"
+              disabled={busy || handleInput.trim().length < 2 || (health !== null && !health.ready)}
+            >
               {busy ? "Starting" : "Start a session"}
             </button>
           </form>
@@ -389,6 +402,31 @@ export function RecallApp() {
             />
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Said plainly, and without pretending the problem is the visitor's. The
+ * pinned models are named because a demo about showing its own workings should
+ * not go coy the moment something is wrong with it.
+ */
+function NotReadyBanner({ health }: { health: HealthReport }) {
+  const database = health.database;
+  return (
+    <div className="banner warn" role="status">
+      <b>This demo is not ready yet</b>
+      {database.status === "unconfigured"
+        ? "It has no database attached, so there is nowhere to store or read memories. Nothing you typed would survive, so the button is disabled rather than pretending otherwise."
+        : database.status === "unreachable"
+          ? "Its database is configured but not answering right now. Rather than lose what you tell it, it is not accepting sessions."
+          : "Its model provider is not configured, so it could not answer or remember anything."}
+      <div style={{ marginTop: 8, fontSize: 12 }}>
+        <code>
+          database: {database.status} / chat: {health.models.chat} / extraction:{" "}
+          {health.models.extraction} / api key: {health.models.keyPresent ? "present" : "missing"}
+        </code>
       </div>
     </div>
   );

@@ -141,6 +141,23 @@ That second run is not decoration. The first time it ran it caught a foreign key
 in memory store had no way to reject, which would have passed every offline test and failed on the
 first real write.
 
+## Readiness
+
+`GET /api/health` reports whether the deployment can actually serve anyone, and answers **503** when
+it cannot, so something watching from outside does not have to parse the body to find out:
+
+```json
+{ "ready": true,
+  "database": { "status": "ok", "detail": "connected" },
+  "models": { "chat": "...", "extraction": "...", "keyPresent": true } }
+```
+
+It runs a real query rather than just constructing a client, because the driver connects lazily and
+anything less would report healthy against a database that is not there. The start screen calls it on
+load and, if the answer is no, says so and disables the button instead of letting a visitor type a
+name and then hit a wall. A demo whose whole argument is that you can inspect its workings should be
+able to answer the simplest question about itself.
+
 ## Deploying it yourself
 
 ```bash

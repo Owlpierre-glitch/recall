@@ -54,3 +54,17 @@ export interface SessionResponse {
   turns: Array<{ id: string; role: "user" | "model"; text: string; createdAt: string }>;
   lastPayload: PayloadView | null;
 }
+
+export type Readiness = "ok" | "unconfigured" | "unreachable";
+
+/**
+ * Lives here rather than in the health route so that a client component can
+ * describe the report without importing anything from a server route. An
+ * `import type` is erased at build time, but one careless edit turning it into
+ * a value import would drag the database client into the browser bundle.
+ */
+export interface HealthReport {
+  ready: boolean;
+  database: { status: Readiness; detail: string };
+  models: { chat: string; extraction: string; keyPresent: boolean };
+}
