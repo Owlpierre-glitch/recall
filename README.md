@@ -123,11 +123,16 @@ Google AI Studio.
 npm test
 ```
 
-42 tests, no services required. To include the Postgres half of the storage contract:
+43 tests, no services required. To include the six that run the same storage contract against a
+real Postgres:
 
 ```bash
 DATABASE_URL="postgresql://..." npm test
 ```
+
+That second run is not decoration. The first time it ran it caught a foreign key ordering bug that the
+in memory store had no way to reject, which would have passed every offline test and failed on the
+first real write.
 
 ## Stack
 
