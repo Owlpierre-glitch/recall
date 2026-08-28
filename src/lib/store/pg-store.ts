@@ -35,6 +35,15 @@ interface MemoryRow {
   superseded_at: Date | null;
 }
 
+function isLocal(connectionString: string): boolean {
+  try {
+    const host = new URL(connectionString).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
 function iso(value: Date | string | null): string | null {
   if (value === null) return null;
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
@@ -66,6 +75,10 @@ export class PostgresStore implements Store {
   constructor(connectionString: string) {
     this.sql = postgres(connectionString, {
       prepare: false,
+      // Supabase requires TLS and postgres.js does not assume it. Defaulting to
+      // off would work on a local database and fail only once deployed, which
+      // is the worst time to discover it. A local host opts out instead.
+      ssl: isLocal(connectionString) ? false : "require",
       max: 3,
       idle_timeout: 20,
       connect_timeout: 15,

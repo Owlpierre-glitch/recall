@@ -14,7 +14,13 @@ if (!url) {
 }
 
 const schema = await readFile(new URL("../db/schema.sql", import.meta.url), "utf8");
-const sql = postgres(url, { prepare: false, max: 1, connect_timeout: 20 });
+const local = /^(postgres(ql)?:\/\/)?[^@]*@?(localhost|127\.0\.0\.1)/.test(url);
+const sql = postgres(url, {
+  prepare: false,
+  ssl: local ? false : "require",
+  max: 1,
+  connect_timeout: 20,
+});
 
 try {
   await sql.unsafe(schema);
