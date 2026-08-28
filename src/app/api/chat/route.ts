@@ -92,6 +92,7 @@ export async function POST(request: Request) {
       activeCount: retrieval.activeCount,
       transcript,
       userMessage: message,
+      sessionId,
     });
 
     const reply = await callGemini(CHAT_MODEL, payloadBody);

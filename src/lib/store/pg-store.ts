@@ -176,21 +176,11 @@ export class PostgresStore implements Store {
           continue;
         }
 
-        if (decision.kind === "supersede") {
-          // Retire the old values first. The partial unique index only allows one
-          // active row per fingerprint, so the insert below would be rejected if
-          // this ran the other way round.
-          for (const old of decision.supersedes) {
-            await tx`
-              update recall_memories
-                 set status           = 'superseded',
-                     superseded_by_id = ${decision.memory.id},
-                     superseded_at    = ${decision.memory.createdAt}
-               where id = ${old.id}
-            `;
-          }
-        }
-
+        // The new row is inserted before the rows it replaces are retired,
+        // because superseded_by_id is a foreign key and cannot point at a row
+        // that does not exist yet. The other order is safe against the partial
+        // unique index either way: reconcile only produces a supersede when no
+        // active row shares this fingerprint, so the two never collide.
         const m = decision.memory;
         await tx`
           insert into recall_memories
@@ -201,6 +191,18 @@ export class PostgresStore implements Store {
              ${m.status}, ${m.lineageId}, ${m.createdAt}, ${m.lastSeenAt},
              ${m.mentionCount}, ${m.sourceSessionId})
         `;
+
+        if (decision.kind === "supersede") {
+          for (const old of decision.supersedes) {
+            await tx`
+              update recall_memories
+                 set status           = 'superseded',
+                     superseded_by_id = ${decision.memory.id},
+                     superseded_at    = ${decision.memory.createdAt}
+               where id = ${old.id}
+            `;
+          }
+        }
       }
     });
   }
