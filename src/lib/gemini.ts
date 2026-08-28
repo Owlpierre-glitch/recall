@@ -12,12 +12,23 @@ import type { GeminiRequestBody } from "./memory/prompt.ts";
  */
 
 /**
- * Pinned deliberately. `gemini-2.5-flash` is the stable generally available
- * alias, not a preview build that disappears on a schedule. Changing it is a
- * code change with a commit against it, not a silent config drift.
+ * Pinned deliberately, and pinned to a current model rather than whatever
+ * happened to work the day this was written.
+ *
+ * This project was first built against gemini-2.5-flash. It worked. Then a
+ * probe against gemini-2.5-flash-lite came back with "no longer available to
+ * new users, please update your code to models/gemini-3.5-flash-lite", which is
+ * the whole reason the error handling below is written the way it is: the model
+ * that is fine for the key that built the thing can already be closed to
+ * everybody else. A public repo pinned to a model new users cannot call is
+ * broken for every person who clones it, and nothing in the app would have said
+ * so out loud.
+ *
+ * Changing this is a code change with a commit against it, never silent config
+ * drift, and an unavailable model names itself on screen.
  */
-export const CHAT_MODEL = "gemini-2.5-flash";
-export const EXTRACTION_MODEL = "gemini-2.5-flash";
+export const CHAT_MODEL = "gemini-3.5-flash";
+export const EXTRACTION_MODEL = "gemini-3.5-flash";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -68,10 +79,26 @@ interface GeminiErrorShape {
   error?: { code?: number; message?: string; status?: string };
 }
 
+/**
+ * One retry on a rate limit, using the delay the provider itself suggests.
+ *
+ * This is not a softening of the rule that failures are loud. A 429 is a
+ * documented transient condition with a stated retry time, and the free tier
+ * ceiling is twenty requests a minute while a single turn costs two of them. A
+ * stranger clicking the link should not be told to come back later because two
+ * other people were curious at the same moment. If the retry also fails, the
+ * error reaches the screen naming the model and the limit, exactly as before.
+ */
+const RATE_LIMIT_RETRIES = 1;
+const MAX_BACKOFF_MS = 8000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function callGemini(
   model: string,
   body: GeminiRequestBody,
   signal?: AbortSignal,
+  attempt = 0,
 ): Promise<string> {
   const key = readApiKey(model);
 
@@ -113,8 +140,14 @@ export async function callGemini(
       });
     }
     if (response.status === 429) {
+      if (attempt < RATE_LIMIT_RETRIES) {
+        const suggested = Number(/retry in ([\d.]+)s/i.exec(detail)?.[1] ?? 0);
+        const wait = Math.min(Math.max(suggested * 1000, 1500) + 400, MAX_BACKOFF_MS);
+        await sleep(wait);
+        return callGemini(model, body, signal, attempt + 1);
+      }
       throw new ProviderError({
-        message: `Rate limited by Gemini while calling ${model}. Provider said: ${detail}`,
+        message: `Rate limited by Gemini while calling ${model}, and a retry was also refused. The free tier allows twenty requests a minute and one turn here costs two. Provider said: ${detail}`,
         model,
         status: response.status,
         code: "RATE_LIMITED",

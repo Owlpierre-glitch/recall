@@ -13,7 +13,8 @@
     "build": "next build",
     "start": "next start",
     "test": "node --test test/*.test.ts",
-    "migrate": "node --env-file-if-exists=.env.local scripts/migrate.ts"
+    "migrate": "node --env-file-if-exists=.env.local scripts/migrate.ts",
+    "verify": "node scripts/verify-live.ts"
   },
   "dependencies": {
     "next": "^15.5.4",

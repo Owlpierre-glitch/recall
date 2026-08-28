@@ -81,6 +81,13 @@ carrying no text is treated as a failure rather than an empty reply. A failed ex
 on screen as "nothing was stored from that message" instead of quietly degrading into an answer with
 no memory behind it.
 
+That handling earned itself during the build. This was written against `gemini-2.5-flash`, which
+worked. A later probe against `gemini-2.5-flash-lite` came back with "no longer available to new
+users, please update your code to `models/gemini-3.5-flash-lite`". The model that is fine for the key
+that built a thing can already be closed to everyone else, which for a public repo means broken for
+every person who clones it, silently. The pin is now on the current generation, and the failure that
+would tell you names itself.
+
 **Forgetting works.** Deleting a memory deletes the whole lineage, meaning the current value and
 every value it replaced. Deleting only the current one would leave "Lives in Manila" sitting in the
 table after somebody asked to be forgotten about where they live. A privacy control that only hides
@@ -133,6 +140,28 @@ DATABASE_URL="postgresql://..." npm test
 That second run is not decoration. The first time it ran it caught a foreign key ordering bug that the
 in memory store had no way to reject, which would have passed every offline test and failed on the
 first real write.
+
+## Verifying a deployment
+
+The unit tests prove the rules. This proves the deployed thing:
+
+```bash
+npm run verify -- https://recall-memory-demo.vercel.app
+```
+
+Twenty checks over plain HTTP, exactly as a stranger's browser would talk to it. It stores a fact,
+repeats it to prove nothing is written twice, ends the session, confirms the closed session refuses
+further messages, starts a new one, asserts the answer is correct **and** that the payload carried
+zero messages over from the session, checks a second person sees none of it, deletes everything and
+confirms a later session genuinely no longer knows. It cleans up after itself, so it is safe to run
+against production.
+
+This is the definition of done expressed as code rather than as a paragraph.
+
+One practical note: a free tier Gemini key allows twenty requests a minute and one turn here costs
+two of them, for extraction and for the answer. A person typing never notices. The script paces
+itself because it is not a person, and the app retries a rate limit once using the delay the provider
+suggests before reporting it on screen.
 
 ## Stack
 
