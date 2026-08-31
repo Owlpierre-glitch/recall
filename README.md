@@ -173,10 +173,24 @@ Worth stating plainly, because "it works" means different things:
 
 ## Deploying it yourself
 
+Once `vercel link` and `GEMINI_API_KEY` are in place, the rest is one command:
+
+```bash
+./scripts/finish-deploy.sh "postgresql://user:password@host:6543/postgres"
+```
+
+It applies the schema, sets the connection string on Vercel, deploys, waits for the deployment to
+report itself ready, and then runs the acceptance suite against the live URL. It stops at the first
+failure rather than carrying on and announcing success, and it refuses a string that still has the
+`[YOUR-PASSWORD]` placeholder in it. The string is passed as an argument and never printed, never
+written into the repo.
+
+The same thing by hand:
+
 ```bash
 vercel link
-vercel env add DATABASE_URL production     # your Postgres connection string
 vercel env add GEMINI_API_KEY production
+vercel env add DATABASE_URL production
 DATABASE_URL="postgresql://..." npm run migrate
 vercel deploy --prod
 npm run verify -- https://your-deployment.vercel.app
