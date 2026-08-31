@@ -4,6 +4,9 @@ A chat demo whose memory survives the session ending, and that lets you check it
 
 **Live: https://recall-memory-demo.vercel.app**
 
+No sign up, no password. Pick a name, tell it something, press **End session**, start a new one, and
+ask it what it knows.
+
 ## The one behaviour
 
 Tell it something. End the session. Start a new one. It still knows.
@@ -121,7 +124,7 @@ npm run migrate              # applies db/schema.sql, safe to run twice
 npm run dev
 ```
 
-`DATABASE_URL` is any Postgres. This one is deployed against Supabase. `GEMINI_API_KEY` comes from
+`DATABASE_URL` is any Postgres. The live deployment runs on Neon. `GEMINI_API_KEY` comes from
 Google AI Studio.
 
 ## Tests
@@ -167,7 +170,7 @@ Worth stating plainly, because "it works" means different things:
 | Memory layer rules | 43 tests, no network, no database, no key |
 | Storage contract | The same 6 tests against the in memory store and against real Postgres |
 | TLS to a hosted database | Migration and all 49 tests over an encrypted connection |
-| Transaction mode pooling | Migration, all 49 tests and all 20 acceptance checks through a real pgbouncer, the topology Supabase's pooled string uses |
+| Transaction mode pooling | Migration, all 49 tests and all 20 acceptance checks through a real pgbouncer |
 | The deployed app | 20 acceptance checks over HTTP against a running deployment |
 | Phone sized screens | Start screen and chat, at 375 wide |
 
@@ -196,8 +199,10 @@ vercel deploy --prod
 npm run verify -- https://your-deployment.vercel.app
 ```
 
-On Supabase, take the **pooled** connection string, the one on port 6543. The driver is configured
-with `prepare: false`, which is what Supabase documents for that endpoint.
+Use the **pooled** connection string, whatever the provider calls it. On Neon that means the host
+with `-pooler` in it, which the console gives you when "Connection pooling" is on. On Supabase it is
+the Transaction pooler on port 6543. The driver is configured with `prepare: false`, which is what
+both providers document for a pooled endpoint.
 
 Being precise about that, because it is the sort of claim people repeat without checking: the whole
 suite has been run through a real pgbouncer in transaction mode, and prepared statements could **not**
@@ -249,8 +254,13 @@ you back in an opaque 400 are not worth keeping.
 
 ## Stack
 
-Next.js and TypeScript, Postgres on Supabase, Gemini for extraction and for answering, deployed on
+Next.js and TypeScript, Postgres on Neon, Gemini for extraction and for answering, deployed on
 Vercel. Four runtime dependencies.
+
+Nothing is tied to a particular Postgres host. `DATABASE_URL` is the whole integration, and the
+storage layer is behind one interface with two implementations, so the provider is a deployment
+detail rather than a design decision. This was first built against Supabase and moved to Neon in
+about five minutes when a free tier project limit got in the way, with no code change at all.
 
 ## License
 
